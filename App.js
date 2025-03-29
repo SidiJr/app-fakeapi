@@ -1,21 +1,11 @@
-import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useState } from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { Button, FlatList } from "react-native-web";
-
-// Faça um aplicativo com expo que, usando https://fakeapi.platzi.com/en/about/introduction/, contenha:
-
-// 1. Liste todas as categorias (coloque botões para carregar seus produtos).
-//[GET] https://api.escuelajs.co/api/v1/categories
-// 2. Atualize o FlatList com os produtos da categoria escolhida;
-// 3. Defina estilos para as categorias e produtos
+import { StyleSheet, Text, TouchableOpacity, View, Image } from "react-native";
+import { FlatList } from "react-native-web";
 
 export default function App() {
-  const [dados, setDados] = useState();
-  // const [carregando, setCarregando] = useState(false);
-  const [erro, setErro] = useState();
-
-  console.log("dados: ", dados);
+  const [categorias, setCategorias] = useState();
+  const [produtos, setProdutos] = useState();
+  const [carregando, setCarregando] = useState(false);
 
   useEffect(() => {
     async function getCategories() {
@@ -27,51 +17,77 @@ export default function App() {
           throw new Error("Erro ao buscar as categorias.");
         }
         const data = await response.json();
-        setDados(data.slice(0, 5));
-      } catch (error) {
-        setErro(error.message);
-      } finally {
-        // setCarregando(false);
-      }
+        setCategorias(data.slice(0, 5));
+      } catch (error) {}
     }
     getCategories();
   }, []);
 
-  const getProduto = useCallback(async () => {
+  const getProduto = useCallback(async (id) => {
     try {
-      const response = await fetch("https://api.escuelajs.co/api/v1/products");
+      setCarregando((prev) => !prev);
+      const response = await fetch(
+        `https://api.escuelajs.co/api/v1/products/?categoryId=${id}`
+      );
       if (!response.ok) {
         throw new Error("Erro ao buscar as categorias.");
       }
       const data = await response.json();
-      setDados(data.slice(0, 5));
+      setProdutos(data);
     } catch (error) {
-      setErro(error.message);
+      setCarregando((prev) => !prev);
     } finally {
-      // setCarregando(false);
+      setCarregando((prev) => !prev);
     }
   }, []);
-
-  //fazer tratativa de erro e loader
 
   return (
     <View style={styles.container}>
       <View style={styles.navbar}>
         <Text style={styles.navbarText}>
-          Clique em uma categoria para vizualizar os produtos
+          Clique em uma categoria para vizualizar os produtos!
         </Text>
       </View>
-      <View style={styles.sidebarContainer}>
-        <FlatList
-          style={styles.flatList}
-          data={dados}
-          keyExtractor={(item) => item.id.toString()}
-          renderItem={({ item }) => (
-            <TouchableOpacity style={styles.listItem}>
-              <Text style={styles.buttonText}>{item.name}</Text>
-            </TouchableOpacity>
+      <View style={styles.wrapper}>
+        <View style={styles.sidebarContainer}>
+          <FlatList
+            style={styles.categorias}
+            data={categorias}
+            keyExtractor={(item) => item.id.toString()}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={styles.listItem}
+                onPress={() => getProduto(item.id)}
+              >
+                <Text style={styles.buttonText}>{item.name}</Text>
+              </TouchableOpacity>
+            )}
+          />
+        </View>
+        <View style={styles.mainContainer}>
+          {carregando ? (
+            <View style={styles.carregando}>
+              <Text style={styles.produtoTitulo}>Carregando...</Text>
+            </View>
+          ) : (
+            <FlatList
+              data={produtos}
+              keyExtractor={(item) => item.id.toString()}
+              renderItem={({ item }) => (
+                <View style={styles.produto}>
+                  <View style={styles.produtoWrapper}>
+                    <Image
+                      source={{ uri: item.images[0] }}
+                      style={styles.produtoImagem}
+                    />
+                    <Text  style={styles.produtoPreco}>Preço: R${item.price}</Text>
+                  </View>
+                  <Text style={styles.produtoTitulo}>{item.title}</Text>
+                </View>
+              )}
+            />
           )}
-        />
+        </View>
       </View>
     </View>
   );
@@ -90,7 +106,7 @@ const styles = StyleSheet.create({
     padding: 5,
   },
   navbarText: {
-    color: "white",
+    color: "#FFFAF0",
     fontSize: 20,
     textAlign: "center",
   },
@@ -98,20 +114,62 @@ const styles = StyleSheet.create({
     width: "25%",
     height: "100%",
   },
-  flatList: {
+  mainContainer: {
+    width: "75%",
+    height: "100%",
+    backgroundColor: "#FFFAF0",
+  },
+  categorias: {
     backgroundColor: "grey",
   },
   listItem: {
-    backgroundColor: 'black',
-    color: 'white',
+    backgroundColor: "black",
+    color: "#FFFAF0",
     margin: 5,
     borderRadius: 30,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     padding: 10,
   },
   buttonText: {
-    color: 'white',
+    color: "#FFFAF0",
     fontSize: 12,
+  },
+  wrapper: {
+    flex: 1,
+    flexDirection: "row",
+  },
+  produto: {
+    padding: 10,
+    borderBottomWidth: 1,
+    borderColor: "#ccc",
+    alignItems: "center",
+  },
+  produtoImagem: {
+    width: 100,
+    height: 100,
+    resizeMode: "cover",
+  },
+  produtoTitulo: {
+    fontSize: 16,
+    fontWeight: "bold",
+    textAlign: "center",
+    padding: 10,
+  },
+  carregando: {
+    paddingTop: 50,
+  },
+  produtoWrapper: {
+    flex: 1,
+    flexDirection: "row",
+  },
+  produtoPreco: {
+    fontSize: 16,
+    fontWeight: "bold",
+    textAlign: "center",
+    padding: 10,
+    justifyContent: "center",
+    alignItems: "center",
+    display: "flex",
   },
 });
